@@ -1,4 +1,5 @@
 # msgen — Master Server Generator
+#### Author: Bocaletto Luca
 
 **msgen** is a cross-platform CLI tool written in Go that scaffolds a standalone, persistent “server” binary. The generated server:
 
