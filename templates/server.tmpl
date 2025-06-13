@@ -1,0 +1,112 @@
+// File: templates/server.tmpl
+package main
+
+import (
+    "fmt"
+    "io/ioutil"
+    "os"
+    "os/signal"
+    "path/filepath"
+    "syscall"
+    "time"
+
+    "github.com/robfig/cron/v3"
+    "github.com/shirou/gopsutil/v3/cpu"
+    "github.com/shirou/gopsutil/v3/host"
+    "github.com/shirou/gopsutil/v3/mem"
+    "github.com/shirou/gopsutil/v3/net"
+    "gopkg.in/mail.v2"
+)
+
+var (
+    // ConfigYAML is embedded at generation-time
+    configYAML = ` + "`{{ .ConfigYAML }}`" + `
+)
+
+type Config struct {
+    Schedule string   ` + "`yaml:\"schedule\"`" + `
+    SMTP     struct {
+        Host     string   ` + "`yaml:\"host\"`" + `
+        Port     int      ` + "`yaml:\"port\"`" + `
+        Username string   ` + "`yaml:\"username\"`" + `
+        Password string   ` + "`yaml:\"password\"`" + `
+        From     string   ` + "`yaml:\"from\"`" + `
+        To       []string ` + "`yaml:\"to\"`" + `
+    }              ` + "`yaml:\"smtp\"`" + `
+    Modules  []string ` + "`yaml:\"modules\"`" + `
+}
+
+// loadConfig writes config.yaml next to the exe and parses it.
+func loadConfig() (*Config, error) {
+    exe, err := os.Executable()
+    if err != nil {
+        return nil, err
+    }
+    dir := filepath.Dir(exe)
+    cfgPath := filepath.Join(dir, "config.yaml")
+    data, err := ioutil.ReadFile(cfgPath)
+    if err != nil {
+        // fallback to embedded
+        data = []byte(configYAML)
+    }
+    var cfg Config
+    if err := yaml.Unmarshal(data, &cfg); err != nil {
+        return nil, err
+    }
+    return &cfg, nil
+}
+
+func collect() string {
+    // IPs
+    addrs, _ := net.Interfaces()
+    var ips []string
+    for _, iface := range addrs {
+        for _, addr := range iface.Addrs {
+            ips = append(ips, addr.Addr)
+        }
+    }
+    hi, _ := host.Info()
+    cp, _ := cpu.Percent(0, false)
+    mi, _ := mem.VirtualMemory()
+    return fmt.Sprintf("Time: %s\nIP: %v\nHost: %s/%s\nCPU: %.1f%%\nMem: %d/%d\n",
+        time.Now().Format(time.RFC3339), ips,
+        hi.Hostname, hi.Platform + " " + hi.PlatformVersion,
+        cp[0], mi.Used, mi.Total)
+}
+
+func send(cfg *Config, body string) error {
+    m := mail.NewMessage()
+    m.SetHeader("From", cfg.SMTP.From)
+    m.SetHeader("To", cfg.SMTP.To...)
+    m.SetHeader("Subject", "[Server] Report")
+    m.SetBody("text/plain", body)
+
+    d := mail.NewDialer(cfg.SMTP.Host, cfg.SMTP.Port,
+        cfg.SMTP.Username, cfg.SMTP.Password)
+    d.StartTLSPolicy = mail.MandatoryStartTLS
+    return d.DialAndSend(m)
+}
+
+func run() {
+    cfg, err := loadConfig()
+    if err != nil {
+        fmt.Println("config error:", err)
+        return
+    }
+    c := cron.New()
+    c.AddFunc(cfg.Schedule, func() {
+        body := collect()
+        if err := send(cfg, body); err != nil {
+            fmt.Println("send error:", err)
+        }
+    })
+    c.Start()
+    // daemon forever, restart on kill if run as Windows Service with recovery
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+    <-sig
+}
+
+func main() {
+    run()
+}
